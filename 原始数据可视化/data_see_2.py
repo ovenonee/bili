@@ -103,3 +103,96 @@ plt.ylabel("点赞量（log）", fontproperties=MY_FONT)
 plt.tight_layout()
 plt.savefig('fig4.png', dpi=300)
 plt.show()
+
+from PIL import Image
+import os
+
+from PIL import Image
+import os
+
+def plot_figure5():
+    # ==================== 关键配置 ====================
+    # 1. 设置covers文件夹的绝对路径
+    #    根据你的实际情况修改，例如：
+    #    COVERS_DIR = r"D:\bilitest\covers"  # 绝对路径
+    #    COVERS_DIR = "covers"                # 相对路径
+    COVERS_DIR = r"D:\bilitest\merged_data\covers"  # ！请确保这个路径正确
+    
+    # 2. 检查CSV中的文件名格式（是否需要加后缀）
+    #    如果CSV中是 "1jpg"，实际文件是 "1.jpg"
+    #    需要添加后缀：fname = row['filename'].replace('jpg', '.jpg')
+    #    如果CSV中已是完整文件名，则不需修改
+    # ==================================================
+    
+    if not os.path.exists(COVERS_DIR):
+        print(f"❌ 文件夹不存在: {os.path.abspath(COVERS_DIR)}")
+        print("请修改 COVERS_DIR 变量为正确路径")
+        return
+    
+    # 检查文件后缀
+    sample_fname = df['filename'].iloc[0]
+    has_extension = '.' in sample_fname
+    print(f"文件名格式: {sample_fname} (是否含后缀: {has_extension})")
+    
+    # 创建3x5网格
+    fig, axes = plt.subplots(3, 5, figsize=(15, 9))
+    axes = axes.flatten()
+    
+    # 获取前3个高频标签
+    top3_labels = df['label'].value_counts().head(3).index.tolist()
+    print(f"选取标签: {top3_labels}")
+    
+    for idx, label in enumerate(top3_labels):
+        samples = df[df['label'] == label].head(5)
+        
+        for j, (_, row) in enumerate(samples.iterrows()):
+            ax_idx = idx * 5 + j
+            
+            # 构建正确的文件路径
+            filename = row['filename']
+            if not has_extension:  # 如果CSV中没有后缀
+                filename = filename.replace('jpg', '.jpg')
+            
+            img_path = os.path.join(COVERS_DIR, filename)
+            
+            try:
+                if os.path.exists(img_path):
+                    img = Image.open(img_path)
+                    axes[ax_idx].imshow(img)
+                else:
+                    # 显示文件名方便调试
+                    axes[ax_idx].text(0.5, 0.5, f'图片缺失\n{filename}', 
+                                    fontproperties=MY_FONT, 
+                                    ha='center', va='center',
+                                    fontsize=8)
+                
+                # 设置标题
+                axes[ax_idx].set_title(f"CTR: {row['CTR']:.4f}", 
+                                      fontproperties=MY_FONT, 
+                                      fontsize=9)
+                axes[ax_idx].axis('off')
+                
+                # 设置左侧标签
+                if j == 0:
+                    axes[ax_idx].set_ylabel(label, fontproperties=MY_FONT, fontsize=12)
+                    
+            except Exception as e:
+                print(f"处理 {filename} 时出错: {e}")
+                axes[ax_idx].text(0.5, 0.5, '加载失败', 
+                                fontproperties=MY_FONT, 
+                                ha='center', va='center')
+                axes[ax_idx].axis('off')
+    
+    # 隐藏未使用的子图
+    total_plots_needed = len(top3_labels) * 5
+    for i in range(total_plots_needed, len(axes)):
+        axes[i].set_visible(False)
+    
+    # 主标题
+    fig.suptitle("图5 三标签封面样本对比 [5]", fontproperties=MY_FONT, fontsize=16)
+    plt.tight_layout()
+    plt.savefig('fig5_sample_grid.png', dpi=300)
+    plt.show()
+
+# 执行
+plot_figure5()
