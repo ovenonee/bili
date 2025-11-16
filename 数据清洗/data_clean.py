@@ -42,6 +42,11 @@ def clean_data(df, output_path='cleaned_data.csv', save_file=True):
     initial_len = len(df_clean)
     df_clean = df_clean.dropna()
     print(f"🗑️  删除缺失值: {initial_len - len(df_clean)} 条")
+      # ===== 新增：去掉播放量为0或点赞量为0的行 =====
+    initial_len = len(df_clean)
+    df_clean = df_clean[(df_clean['play_count'] > 0) & (df_clean['like_count'] > 0)]
+    print(f"🗑️  删除播放/点赞为0: {initial_len - len(df_clean)} 条")
+    # ==========================================
     
     # 汇总统计
     print("\n" + "="*50)

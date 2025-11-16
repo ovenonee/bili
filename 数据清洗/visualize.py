@@ -93,3 +93,63 @@ fig.write_html(html_path)
 print(f"\n✅ 可视化完成！")
 print(f"📊 静态图已保存至: {out_dir}")
 print(f"🌐 双击打开交互报告: {html_path}")
+
+
+# 评估脚本
+print("📊 数据质量评估")
+print("="*50)
+
+# 1. 数据完整性
+total_cells = len(df) * len(df.columns)
+missing_cells = df.isnull().sum().sum()
+print(f"✅ 数据完整性: {(1 - missing_cells/total_cells)*100:.1f}%")
+
+# 2. 标签平衡性（假设你有一列叫 label）
+if 'label' in df.columns:
+    gini = 1 - sum((df['label'].value_counts() / len(df)) ** 2)
+    print(f"✅ 标签平衡性（Gini系数）: {gini:.3f}（越接近0越平衡）")
+else:
+    print("⚠️  未发现 ‘label’ 列，跳过标签平衡性评估")
+
+# 3. CTR判别力（ANOVA效应量）
+if 'CTR' in df.columns and 'label' in df.columns:
+    import scipy.stats as stats
+    groups = [group['CTR'].values for _, group in df.groupby('label')]
+    f_stat, p_val = stats.f_oneway(*groups)
+    print(f"✅ 标签判别力: F={f_stat:.2f}, p={p_val:.3g}")
+else:
+    print("⚠️  未发现 ‘CTR’ 或 ‘label’ 列，跳过 CTR 判别力评估")
+
+# 4. 视觉特征有效性（随机抽检验证）
+# 只有当你真的存了封面图并且写了 extract_visual_features 时才跑
+if os.path.isdir("covers") and 'CTR' in df.columns and 'filename' in df.columns:
+    import numpy as np
+    random_100 = df.sample(100)
+    high_ctr = random_100[random_100['CTR'] > random_100['CTR'].median()]
+    low_ctr  = random_100[random_100['CTR'] <= random_100['CTR'].median()]
+
+    def extract_visual_features(path):
+        # 这里用伪代码占位，实际请替换成你的实现
+        return [0]*10   # 返回一个包含亮度等10维特征的list
+
+    high_brightness = np.array([extract_visual_features(f"covers/{f}")[6]
+                                for f in high_ctr['filename']])
+    low_brightness  = np.array([extract_visual_features(f"covers/{f}")[6]
+                                for f in low_ctr['filename']])
+    t_stat, p_val = stats.ttest_ind(high_brightness, low_brightness)
+    print(f"✅ 亮度特征有效性: t={t_stat:.2f}, p={p_val:.3f}")
+else:
+    print("⚠️  缺少 ‘covers’ 目录或相关列，跳过视觉特征评估")
+
+    # ---------- 调试专用 ----------
+print("DataFrame 列名：", df.columns.tolist())          # 看列名到底叫啥
+if 'label' in df.columns:
+    vc = df['label'].value_counts()
+    print("label 取值分布：\n", vc)
+    print("label 占比：\n", (vc / vc.sum()).round(4))
+    # 计算 Gini 系数（你的公式没错，再算一遍）
+    gini = 1 - sum((vc / vc.sum()) ** 2)
+    print("重新计算的 Gini：", gini)
+else:
+    print("⚠️ 确实没有叫 label 的列！")
+# ------------------------------
